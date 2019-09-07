@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Summarize Enron Emails</title>
+</head>
+
+<body>
+
+    <form action="" method="post">
+
+    {{ form.csrf_token() }}
+    <p> Please choose inbox you wish to summarize: </p>
+    <p>{{ form.inbox.label() }}   {{ form.inbox() }}
+            {% for inbox in form.inbox.errors %}
+                {{ inbox }}
+            {% endfor %}
+    </p>
+
+        <p> Display associated email with summary? </p>
+        {{ form.display_full() }}
+
+        <p>
+            {{ form.start_date.label() }}   {{ form.start_date() }}
+            {% for error in form.start_date.errors %}
+                {{ error }}
+            {% endfor %}
+
+            {{ form.end_date.label() }}   {{ form.end_date() }}
+            {% for error in form.end_date.errors %}
+                {{ error }}
+            {% endfor %}
+        </p>
+
+      {% with messages = get_flashed_messages() %}
+         {% if messages %}
+            <ul>
+               {% for message in messages %}
+                   {% autoescape false %}
+                    {{ message }}
+                   {% endautoescape %}
+               {% endfor %}
+            </ul>
+         {% endif %}
+      {% endwith %}
+
+    <p> {{ form.submit() }}
+            {% for error in form.submit.errors %}
+                {{ error }}
+            {% endfor %}
+    </p>
+
+
+</body>
+</html>
