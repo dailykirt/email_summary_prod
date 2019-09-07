@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
 import pickle
-import multiprocessing
 
 # color scheme to help distinguish summarizaiton text.
 class bcolors:
