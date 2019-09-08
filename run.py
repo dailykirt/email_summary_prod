@@ -1,10 +1,13 @@
 from __future__ import print_function, unicode_literals
 from flask import Flask, flash, render_template
+from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from flaskForms import SummarizationForm
+import pandas as pd
 
 app = Flask(__name__)
 app.config.from_object(Config)
+db = SQLAlchemy(app)
 
 @app.route('/', methods=['get','post'])
 def home_page():
@@ -16,7 +19,9 @@ def home_page():
         start_date = form.start_date.data
         end_date = form.end_date.data
         display_full = form.display_full.data
-        print(display_full)
+        test_df = pd.read_sql_query('select * from enron_single_mailbox', con=db.engine)
+        print(test_df.head())
+
         if (start_date != '') and (end_date != ''):
             form.model.summarize_emails(start_date,end_date, inbox)
         if form.model.final_summary == '':
