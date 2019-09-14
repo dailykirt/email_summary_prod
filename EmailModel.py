@@ -21,10 +21,10 @@ class EmailModel:
         self.db = db
         #self.ENRON_PICKLE_LOC = "data/dataframes/wrangled_enron_full_df.pkl"
         #self.WORD_EMBEDDINGS_LOC = "data/word_embeddings.pkl"
-        #self.enron_df = pd.read_pickle(self.ENRON_PICKLE_LOC)
+        #self.enron_df = pd.read_pickle(self.ENRON_PICKLE_LOC
         #self.word_embeddings = pickle.load(open(self.WORD_EMBEDDINGS_LOC, "rb"))
-        self.table = 'cleaned_sj'
-        #self.table = 'full_enron_emails'
+        #self.table = 'cleaned_sj'
+        self.table = 'full_enron_emails'
         self.final_summary = ''
         self.html_summary = []
         self.original_emails = []
