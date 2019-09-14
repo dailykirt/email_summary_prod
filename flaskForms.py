@@ -3,9 +3,6 @@ from wtforms import SelectField, SubmitField, StringField, RadioField, validator
 
 
 class SummarizationForm(FlaskForm):
-    #model = EmailModel()
-    #employee_list = employeeChoiceList(model.list_employees())
-    #inbox = SelectField(u'Inbox', choices= employeeChoiceList(employee_list))
     inbox = SelectField('Inbox')
     submit = SubmitField('Submit')
     start_date = StringField('Start Date: ')

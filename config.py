@@ -6,5 +6,5 @@ class Config(object):
     #SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:postgres@localhost/testdb'
     #AWS
     SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://masterUsername:CraterLake12@rds-postgresql-email-sum.ced5yvd9vkk3.us-east-2.rds.amazonaws.com/myDatabase'
-    #Enviroment URL
-    SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://masterUsername:CraterLake12@rds-postgresql-email-sum.ced5yvd9vkk3.us-east-2.rds.amazonaws.com/myDatabase?sslrootcert=rds-combined-ca-bundle.pem&sslmode=require'
+    #Heroku Enviroment URL
+    #SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://masterUsername:CraterLake12@rds-postgresql-email-sum.ced5yvd9vkk3.us-east-2.rds.amazonaws.com/myDatabase?sslrootcert=rds-combined-ca-bundle.pem&sslmode=require'

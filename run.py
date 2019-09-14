@@ -5,7 +5,6 @@ from config import Config
 from flaskForms import SummarizationForm
 import pandas as pd
 from EmailModel import EmailModel
-import datetime
 import pytz
 
 app = Flask(__name__)
@@ -19,8 +18,9 @@ utc=pytz.UTC
 def home_page():
     form = SummarizationForm()
     employee_list = model.list_employees()
-    #print(model.list_employees())
     form.inbox.choices = [(i, i) for i in employee_list ]
+    start_date = ''
+    end_date = ''
 
     if form.validate_on_submit():
         inbox = form.inbox.data
@@ -33,7 +33,6 @@ def home_page():
             start = pd.to_datetime(start_date).replace(tzinfo=utc)
             end = pd.to_datetime(end_date).replace(tzinfo=utc)
             model.summarize_emails(start, end, inbox)
-            #print("summarize")
         if model.final_summary == '':
             flash('Please enter a start and end date between: ' + timeframe['start'] + ' and ' + timeframe['end'])
         else:
@@ -46,6 +45,3 @@ def home_page():
 
 if __name__ == '__main__':
     app.run()
-    #api_start = InquireEmail()
-    #api_start.start_ask()
-

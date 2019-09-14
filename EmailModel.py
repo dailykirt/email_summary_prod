@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
-import pickle
 
 # color scheme to help distinguish summarizaiton text.
 class bcolors:
@@ -19,10 +18,6 @@ class EmailModel:
     def __init__(self, db):
         # Load model data
         self.db = db
-        #self.ENRON_PICKLE_LOC = "data/dataframes/wrangled_enron_full_df.pkl"
-        #self.WORD_EMBEDDINGS_LOC = "data/word_embeddings.pkl"
-        #self.enron_df = pd.read_pickle(self.ENRON_PICKLE_LOC
-        #self.word_embeddings = pickle.load(open(self.WORD_EMBEDDINGS_LOC, "rb"))
         #self.table = 'cleaned_sj'
         self.table = 'full_enron_emails'
         self.final_summary = ''
@@ -41,8 +36,6 @@ class EmailModel:
         query = 'SELECT max(date) FROM ' + self.table + ' WHERE employee = ' + inbox
         end_date = pd.read_sql_query(query, self.db.engine).iloc[0][0]
         return {'start': str(start_date), 'end': str(end_date)}
-
-
 
     def subset_emails(self, start_date, end_date, inbox):
         """Outputs a subset of the enron dataset masked by the person and a timeframe. """
@@ -86,7 +79,6 @@ class EmailModel:
         self.clean_sentences = self.enron_masked_df.Tokenized_Body.tolist()
         # flatten list
         self.clean_sentences = [y for x in self.clean_sentences for y in x]
-        #self.clean_sentences = self.clean_sentences
 
     def processCosineSim(self, index):
         # Used to calculate sentence similarity
@@ -97,7 +89,6 @@ class EmailModel:
     def rank_sentences(self):
         """Returns a list of sorted scores with the index of the email the extracted sentence came from. """
         # Parrallelize function due to slow O(n^2) runtime where n is number of sentence vectors.
-        #pool = multiprocessing.Pool(processes=6)
         num_sen = len(self.sentences)
         self.reshape_sentence_vectors = []
         for i in range(num_sen):
@@ -112,7 +103,6 @@ class EmailModel:
         result = []
         for index in indexes:
             result.append(self.processCosineSim((index)))
-        #result = pool.map(self.processCosineSim, indexes)
         # put result into similarity matrix
         sim_mat = np.zeros([num_sen, num_sen])
         for count, index in enumerate(indexes):
@@ -143,10 +133,7 @@ class EmailModel:
         """Pull out clean tokenized sentences. """
         self.sentence_vectors = self.enron_masked_df.sentence_vectors.tolist()
         # flatten list
-        #print(type(self.sentence_vectors[0]))
-        #print(self.sentence_vectors[0][0])
         self.sentence_vectors = [np.asarray(y, dtype=np.float32) for x in self.sentence_vectors for y in x]
-        #self.clean_sentences = self.clean_sentences
 
     def display_summary(self):
         # Specify number of sentences as a fraction of total emails.
@@ -178,14 +165,9 @@ class EmailModel:
 
     def summarize_emails(self, start, end, inbox):
         self.subset_emails(start, end, inbox)
-        print("Total number of emails to summarize: " + str(len(self.enron_masked_df)))
+        #print("Total number of emails to summarize: " + str(len(self.enron_masked_df)))
         self.get_extractive_sentences()
-        #self.get_tokenized_sentences()
-        # Generate sentence vectors
-        #self.create_sentence_vectors()
         self.get_sentence_vectors()
         # Create a list of ranked sentences.
         self.rank_sentences()
-        #print(self.ranked_sentences)
-        # return enron_masked_df, ranked_sentences
         self.display_summary()
