@@ -4,33 +4,43 @@ from flask_sqlalchemy import SQLAlchemy
 from config import Config
 from flaskForms import SummarizationForm
 import pandas as pd
+from EmailModel import EmailModel
+import datetime
+import pytz
 
 app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
+#Instantiate model with conneciton to database.
+model = EmailModel(db)
+utc=pytz.UTC
 
 @app.route('/', methods=['get','post'])
 def home_page():
     form = SummarizationForm()
+    employee_list = model.list_employees()
+    #print(model.list_employees())
+    form.inbox.choices = [(i, i) for i in employee_list ]
 
     if form.validate_on_submit():
         inbox = form.inbox.data
-        timeframe = form.model.get_timeframe(inbox)
+        timeframe = model.get_timeframe(inbox)
         start_date = form.start_date.data
         end_date = form.end_date.data
         display_full = form.display_full.data
-        test_df = pd.read_sql_query('select * from enron_single_mailbox', con=db.engine)
-        print(test_df.head())
 
         if (start_date != '') and (end_date != ''):
-            form.model.summarize_emails(start_date,end_date, inbox)
-        if form.model.final_summary == '':
+            start = pd.to_datetime(start_date).replace(tzinfo=utc)
+            end = pd.to_datetime(end_date).replace(tzinfo=utc)
+            model.summarize_emails(start, end, inbox)
+            #print("summarize")
+        if model.final_summary == '':
             flash('Please enter a start and end date between: ' + timeframe['start'] + ' and ' + timeframe['end'])
         else:
-            for count, summary in enumerate(form.model.html_summary):
+            for count, summary in enumerate(model.html_summary):
                 flash(summary)
                 if display_full == 'yes':
-                    flash("Full Email: " + form.model.original_emails[count] + "<br/>")
+                    flash("Full Email: " + model.original_emails[count] + "<br/>")
 
     return render_template('home_page.html', form=form)
 
