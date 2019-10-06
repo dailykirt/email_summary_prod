@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
+import time
+import threading
+#import multiprocessing
+#from pathos.multiprocessing import ProcessingPool as Pool
 
 # color scheme to help distinguish summarizaiton text.
 class bcolors:
@@ -15,14 +19,18 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 class EmailModel:
-    def __init__(self, db):
+    def __init__(self, db, table):
         # Load model data
         self.db = db
-        #self.table = 'cleaned_sj'
-        self.table = 'full_enron_emails'
+        self.table = table
         self.final_summary = ''
         self.html_summary = []
         self.original_emails = []
+        # try:
+        #     self.cpus = multiprocessing.cpu_count()
+        # except NotImplementedError:
+        #     self.cpus = 2
+        # self.pool = multiprocessing.Pool(processes=self.cpus)
 
     def list_employees(self):
         query = 'SELECT DISTINCT "employee" FROM ' + self.table
@@ -39,12 +47,22 @@ class EmailModel:
 
     def subset_emails(self, start_date, end_date, inbox):
         """Outputs a subset of the enron dataset masked by the person and a timeframe. """
+
         def restore_extractive(text):
             # Restore list of sentences, since postgres stores as strings.
             text = text.split('","')
             text[0] = text[0][2:]
             text[-1] = text[-1][:-2]
             return text
+
+        def restore_text_rank(text):
+            sentence_ranks = []
+            text = text.split(',')
+            text[0] = text[0][2:]
+            text[-1] = text[-1][:-2]
+            for rank in text:
+                sentence_ranks.append(np.array(rank, dtype=np.float32))
+            return sentence_ranks
 
         def restore_sentence_vectors(text):
             sentence_vectors = []
@@ -61,8 +79,9 @@ class EmailModel:
         self.enron_df = pd.read_sql_query(query, self.db.engine)
         summarization_mask = (self.enron_df['date'] >= start_date) & (self.enron_df['date'] <= end_date) & (self.enron_df['employee'] == inbox)
         self.enron_masked_df = self.enron_df.loc[summarization_mask]
-        self.enron_masked_df['extractive_sentences'] = self.enron_masked_df['extractive_sentences'].apply(restore_extractive)
-        self.enron_masked_df['sentence_vectors'] = self.enron_masked_df['sentence_vectors'].apply(restore_sentence_vectors)
+        self.enron_masked_df.loc[:, 'extractive_sentences'] = self.enron_masked_df['extractive_sentences'].apply(restore_extractive)
+        self.enron_masked_df.loc[:, 'sentence_vectors'] = self.enron_masked_df['sentence_vectors'].apply(restore_sentence_vectors)
+        self.enron_masked_df.loc[:, 'TextRanks'] = self.enron_masked_df['TextRanks'].apply(restore_text_rank)
 
     def get_extractive_sentences(self):
         """Retrieve original sentences and index them. This will be used to generate the extracted summaries. """
@@ -88,28 +107,32 @@ class EmailModel:
 
     def rank_sentences(self):
         """Returns a list of sorted scores with the index of the email the extracted sentence came from. """
-        # Parrallelize function due to slow O(n^2) runtime where n is number of sentence vectors.
         num_sen = len(self.sentences)
         self.reshape_sentence_vectors = []
         for i in range(num_sen):
             self.reshape_sentence_vectors.append(self.sentence_vectors[i].reshape(1, 300))
-        # unroll similarity loop.
         indexes = []
+
+        #Create unrolled indexes
         for i in range(num_sen):
             for j in range(num_sen):
                 if (i != j) and (i < j):  # Don't compare sentence to itself, or repeat comparisons.
                     indexes.append([i, j])
-        #Now calculate similarities
-        result = []
-        for index in indexes:
-            result.append(self.processCosineSim((index)))
+        #Now calculate sentence similarities
+        t1 = time.time()
+        result = cosine_similarity(self.reshape_sentence_vectors)
+        #List comprehension attempt
+        #result = [self.processCosineSim(index) for index in indexes]
+        #multiprocessing attempt
+        #self.pool.map(self.processCosineSim, indexes)
+        t2 = time.time()
+        print("\nTime taken to calculate similarities: {} seconds".format(1 * (t2 - t1)))
+
         # put result into similarity matrix
         sim_mat = np.zeros([num_sen, num_sen])
+
         for count, index in enumerate(indexes):
-            i = index[0]
-            j = index[1]
-            if (i != j) and (i < j):
-                sim_mat[i][j] = result[count]
+            sim_mat[index[0]][index[1]] = result[count]
 
         # now generate scores and rank sentences
         nx_graph = nx.from_numpy_array(sim_mat)
@@ -136,8 +159,13 @@ class EmailModel:
         self.sentence_vectors = [np.asarray(y, dtype=np.float32) for x in self.sentence_vectors for y in x]
 
     def display_summary(self):
+        #Total emails to summarize
+        self.total_emails = len(self.enron_masked_df)
+        #Debug total sentences:
+        total_sentences = len(self.ranked_sentences)
+        print("total sentences: " + str(total_sentences))
         # Specify number of sentences as a fraction of total emails.
-        sn = (len(self.enron_masked_df) // 10) + 1
+        sn = (self.total_emails // 10) + 1
         self.html_summary = []
         self.final_summary = ''
         # Generate summary
@@ -163,11 +191,65 @@ class EmailModel:
             self.original_emails.append(email_body)
         print(self.final_summary)
 
+    def create_summary_df(self):
+        #This takes the extractive sentences, and pairs them with the TextRank to prepare display
+        TextRanks = self.enron_masked_df.TextRanks.tolist()
+        TextRanks = [y for x in TextRanks for y in x]
+
+        output_df = pd.DataFrame(list(zip(self.sentences, TextRanks)), columns=['Sentences', 'TextRanks'])
+        output_df['TextRanks'] = output_df.TextRanks.astype(float)
+        # Specify number of sentences as a fraction of total emails.
+        sn = (len(self.enron_masked_df) // 10) + 1
+        self.display_top_df = output_df.nlargest(sn, 'TextRanks')
+
+        print(self.display_top_df)
+
+    def display_summary_df(self):
+        final_summary = ''
+        for index, row in self.display_top_df.iterrows():
+            # pull date and subject from original email
+            i = row['Sentences'][0]
+            email_date = str(self.enron_masked_df['date'].iloc[i])
+            email_subject = str(self.enron_masked_df['subject'].iloc[i])
+            email_from = str(self.enron_masked_df['from'].iloc[i])
+            email_body = str(self.enron_masked_df['body'].iloc[i])
+
+            self.final_summary += bcolors.BOLD + "Date: " + email_date + \
+                             " Subject: " + email_subject + \
+                             " From: " + email_from + bcolors.ENDC + \
+                             "\nSummary: " + str(row['Sentences'][1])
+
+            #Used to create HTML text that will be displayed.
+            self.html_summary.append("<br/>" + \
+                                     "Date: " + email_date + \
+                                     " Subject: " + email_subject + \
+                                     " From: " + email_from + "<br/>" + \
+                                     "\nSummary: " + str(row['Sentences'][1]) + "<br/>"
+                                     )
+
+            self.original_emails.append(email_body)
+        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
+            print(self.enron_masked_df.iloc[9])
+        #print(final_summary)
+
     def summarize_emails(self, start, end, inbox):
+        t1 = time.time()
         self.subset_emails(start, end, inbox)
         #print("Total number of emails to summarize: " + str(len(self.enron_masked_df)))
         self.get_extractive_sentences()
         self.get_sentence_vectors()
+        t2 = time.time()
+        print("\nTime taken to prepare sentences: {} seconds".format(1 * (t2 - t1)))
         # Create a list of ranked sentences.
+        t1 = time.time()
         self.rank_sentences()
+        t2 = time.time()
+        print("\nTime taken to rank sentences: {} seconds".format(1 * (t2 - t1)))
         self.display_summary()
+
+    def retrieve_summaries(self, start, end, inbox):
+        self.subset_emails(start, end, inbox)
+        self.get_extractive_sentences()
+        self.create_summary_df()
+        self.display_summary_df()
+        #print(self.enron_masked_df)
