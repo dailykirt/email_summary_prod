@@ -11,7 +11,8 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db = SQLAlchemy(app)
 #Instantiate model with conneciton to database.
-model = EmailModel(db, Config.EMAIL_TABLE)
+#model = EmailModel(db, Config.EMAIL_TABLE)
+model = EmailModel(db, 'test_rank_db')
 utc=pytz.UTC
 
 # @app.route('/', methods=['get','post'])
