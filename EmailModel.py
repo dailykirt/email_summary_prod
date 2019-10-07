@@ -4,7 +4,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
 import time
 import threading
-#import multiprocessing
+import multiprocessing as mp
 #from pathos.multiprocessing import ProcessingPool as Pool
 
 # color scheme to help distinguish summarizaiton text.
@@ -167,7 +167,9 @@ class EmailModel:
         # Specify number of sentences as a fraction of total emails.
         sn = (self.total_emails // 10) + 1
         self.html_summary = []
+        #reclear out dispaly summaries
         self.final_summary = ''
+        self.original_emails = []
         # Generate summary
         for i in range(sn):
             # pull date and subject from original email
@@ -205,7 +207,11 @@ class EmailModel:
         print(self.display_top_df)
 
     def display_summary_df(self):
-        final_summary = ''
+        # reclear out dispaly summaries
+        self.final_summary = ''
+        self.html_summary = []
+        self.original_emails = []
+
         for index, row in self.display_top_df.iterrows():
             # pull date and subject from original email
             i = row['Sentences'][0]
@@ -228,8 +234,6 @@ class EmailModel:
                                      )
 
             self.original_emails.append(email_body)
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-            print(self.enron_masked_df.iloc[9])
         #print(final_summary)
 
     def summarize_emails(self, start, end, inbox):

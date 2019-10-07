@@ -7,11 +7,16 @@ import multiprocessing
 
 from sqlalchemy import create_engine
 
-
 class TextRank:
 
     def __init__(self, df):
         self.email_df = df
+        try:
+            self.cpus = multiprocessing.cpu_count()
+        except NotImplementedError:
+            self.cpus = 2
+        print('number CPUS: ' + str(self.cpus))
+        self.pool = multiprocessing.Pool(processes=self.cpus)
         # Extract word embeddings.
         self.extract_word_vectors()
 
@@ -62,35 +67,55 @@ class TextRank:
 
     def processCosineSim(self, index):
         # Used to calculate sentence similarity
-        sen_i = self.reshape_sentence_vectors[index[0]]
-        sen_j = self.reshape_sentence_vectors[index[1]]
+        #sen_i = self.reshape_sentence_vectors[index[0]]
+        #sen_j = self.reshape_sentence_vectors[index[1]]
+        sen_i = self.sentence_vectors[index[0]].reshape(1, 300)
+        sen_j = self.sentence_vectors[index[1]].reshape(1, 300)
         return cosine_similarity(sen_i, sen_j)[0, 0]
 
     def rank_sentences(self):
         """Returns a list of sorted scores with the index of the email the extracted sentence came from. """
         num_sen = len(self.sentences)
-        self.reshape_sentence_vectors = []
-        for i in range(num_sen):
-            self.reshape_sentence_vectors.append(self.sentence_vectors[i].reshape(1, 300))
-        indexes = []
+        #self.reshape_sentence_vectors = []
+        #for i in range(num_sen):
+        #    self.reshape_sentence_vectors.append(self.sentence_vectors[i].reshape(1, 300))
+        #indexes = []
 
-        #Create unrolled indexes
+        #print(num_sen)
+        #attempt at multiprocessing
+        #indexes = []
+        #for i in range(num_sen):
+        #    for j in range(num_sen):
+        #        if (i != j) and (i < j):
+        #            indexes.append([i, j])
+        #pool = multiprocessing.Pool(processes=self.cpus)
+        #result = pool.map(processCosineSim, indexes)
+                    #Normal slow way
+        sim_mat = np.zeros([num_sen, num_sen])
+
         for i in range(num_sen):
             for j in range(num_sen):
                 if (i != j) and (i < j):  # Don't compare sentence to itself, or repeat comparisons.
-                    indexes.append([i, j])
+                    sim_mat[i][j] = self.processCosineSim([i, j])
 
-        #List comprehension attempt
-        result = [self.processCosineSim(index) for index in indexes]
-        # put result into similarity matrix
-        sim_mat = np.zeros([num_sen, num_sen])
+        # #Create unrolled indexes
+        # for i in range(num_sen):
+        #     for j in range(num_sen):
+        #         if (i != j) and (i < j):  # Don't compare sentence to itself, or repeat comparisons.
+        #             indexes.append([i, j])
+        #
+        # #Calculate similarity matrix
+        # result = [self.processCosineSim(index) for index in indexes]
+        # # put result into similarity matrix
+        #sim_mat = np.zeros([num_sen, num_sen])
 
-        for count, index in enumerate(indexes):
-            sim_mat[index[0]][index[1]] = result[count]
+        #for count, index in enumerate(indexes):
+        #    sim_mat[index[0]][index[1]] = result[count]
 
         # now generate scores and rank sentences
-        nx_graph = nx.from_numpy_array(sim_mat)
-        scores = nx.pagerank(nx_graph)
+        #nx_graph = nx.from_numpy_array(sim_mat)
+        #scores = nx.pagerank(nx_graph)
+        scores = nx.pagerank(nx.from_numpy_array(sim_mat))
         # Pair sentence with it's similarity score then sort. (score, email_index, sentence)
         self.ranked_sentences = list(((scores[i], s[0], s[1]) for i, s in enumerate(self.sentences)))
 
@@ -102,7 +127,7 @@ class TextRank:
 
     def insert_db(self):
         cnx = create_engine(data_config.postgres_str)
-        self.email_masked_df.to_sql('test_rank_db', cnx, if_exists='append')
+        self.email_masked_df.to_sql(data_config.table, cnx, if_exists='append')
 
     def summarize_emails(self):
         # Creating sentence vectors for each cleaned sentence.
@@ -116,6 +141,6 @@ class TextRank:
             self.append_rank_df()
             self.insert_db()
 
-        print(self.email_masked_df)
+        #print(self.email_masked_df)
         #print(self.email_masked_df.info())
 

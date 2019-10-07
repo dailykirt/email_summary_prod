@@ -84,6 +84,7 @@ class DataWrangling:
         # mailboxes = listdir(mail_dir)
         # for mailbox in mailboxes:
         mailbox = data_config.mailbox
+        print("Processing mailbox: " + mailbox)
         inbox = listdir(data_config.mail_dir + mailbox)
         for folder in inbox:
             path = data_config.mail_dir + data_config.mailbox + "/" + folder

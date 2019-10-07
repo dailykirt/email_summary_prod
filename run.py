@@ -62,13 +62,14 @@ def home_page():
             model.retrieve_summaries(start, end, inbox)
             #model.summarize_emails(start, end, inbox)
             #flash("Total emails to summarize: " + str(model.total_emails))
-        if model.final_summary == '':
+        if model.html_summary == []:
             flash('Please enter a start and end date between: ' + timeframe['start'] + ' and ' + timeframe['end'] + "<br/>")
         else:
             for count, summary in enumerate(model.html_summary):
                 flash(summary)
                 if display_full == 'yes':
                     flash("Full Email: " + model.original_emails[count] + "<br/>")
+            model.html_summary = []
 
     return render_template('home_page.html', form=form)
 
