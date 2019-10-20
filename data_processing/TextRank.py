@@ -55,12 +55,15 @@ class TextRank:
         """Retrieve original sentences and index them. This will be used to generate the extracted summaries. """
         # flatten list as tuples containting (sentence, dataframe index) to be used to reassociate summary with original email.
         sentences = []
+        #sentences = np.array([[0, 'initialize']])
         sentences_list = email_masked_df.extractive_sentences.tolist()
+        #flatten sentences and keep email number.
         for counter, sublist in enumerate(sentences_list):
             for item in sublist:
                 sentences.append([counter, item])
-        #self.sentences = sentences
+        #try numpy array instead
         return sentences
+
 
     def subset_emails(self, employee):
         summarization_mask = (self.email_df['employee'] == employee)
@@ -81,13 +84,13 @@ class TextRank:
     #    sen_j = self.sentence_vectors[index[1]].reshape(1, 300)
     #    return cosine_similarity(sen_i, sen_j)[0, 0]
 
-    #def rank_sentences(self, sentences, sentence_vectors):
+    #def rank_sentences(self, sentensubset_emailsces, sentence_vectors):
     def rank_sentences(self, sentences, sim_result, indexes):
         """Returns a list of sorted scores with the index of the email the extracted sentence came from. """
         #manually garbage collect
         gc.collect()
         num_sen = len(sentences)
-        print(num_sen)
+        print("Number of sentences: " + str(num_sen))
         sim_mat = np.zeros([num_sen, num_sen])
 
         # for i in range(num_sen):
@@ -108,9 +111,8 @@ class TextRank:
         # Pair sentence with it's similarity score then sort. (score, email_index, sentence)
         return list(((scores[i], s[0], s[1]) for i, s in enumerate(sentences)))
 
-    def unroll_rank_indexes(self, sentences):
+    def unroll_rank_indexes(self, sen_len):
         #This returns a list of indexes that need to be calculated for the similarity matrix.
-        sen_len = len(sentences)
         indexes = []
         for i in range(sen_len):
             for j in range(sen_len):
