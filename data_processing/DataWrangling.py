@@ -141,3 +141,5 @@ class DataWrangling:
         # Splitting the text in emails into cleaned sentences
         self.enron_email_list_df['tokenized_body'] = self.enron_email_list_df['body'].apply(self.tokenize_email)
 
+        
+

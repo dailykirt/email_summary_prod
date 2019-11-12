@@ -13,11 +13,19 @@ def processCosineSim(sentence_vectors, index):
     sen_i = sentence_vectors[index[0]].reshape(1, 300)
     sen_j = sentence_vectors[index[1]].reshape(1, 300)
     return cosine_similarity(sen_i, sen_j)[0, 0]
+    #return (index[0], index[1], cosine_similarity(sen_i, sen_j)[0, 0])
 
-#def processCosineSim(sentence_vec):
-#    return cosine_similarity(sentence_vec[0], sentence_vec[1])
 
-#def main():
+def generate_indexes(sen_len):
+    # Generator to produce sentence indexes. For very large inboxes,
+    # the window limits comparisons to sentences that are close timewise. Attempt to get total comparisons to under ten million.
+    window = (10000000 // sen_len) + 1
+    print("window: " + str(window))
+    for i in range(sen_len):
+        for j in range(sen_len):
+            diff = j - i
+            if (i != j) and (i < j) and (diff < window):
+                yield (i, j)
 
 if __name__ == '__main__':
     #Attempt to get number of cpus
@@ -25,14 +33,15 @@ if __name__ == '__main__':
         cpus = mp.cpu_count()
     except NotImplementedError:
         cpus = 2
-    pool = mp.Pool(processes=cpus)
+    #pool = mp.Pool(processes=cpus)
+
     print("CPUS: " + str(cpus))
     #Wrangle chosen directories
     print("Wrangle enron mailbox")
     dw.wrangle_full_enron()
     #force garbage collection.
     gc.collect()
-    print(dw.enron_email_list_df.info())
+    #print(dw.enron_email_list_df.info())
     #Summarize each inbox that was chosen.
     tr = TextRank(dw.enron_email_list_df)
 
@@ -41,30 +50,31 @@ if __name__ == '__main__':
 
         print("Pre ranking work")
         email_masked_df = tr.subset_emails(employee)
+        print(email_masked_df.info())
+        print("Get extractive sentences")
         sentences = tr.get_extractive_sentences(email_masked_df)
-        indexes = tr.unroll_rank_indexes(len(sentences))
-        sentence_vectors = tr.get_sentence_vectors(email_masked_df)
 
-        #preprocess indexed sentence vectors
-        #full_vectors = []
-        #for index in indexes:
-        #    sen_i = sentence_vectors[index[0]].reshape(1, 300)
-        #    sen_j = sentence_vectors[index[1]].reshape(1, 300)
-        #    full_vectors.append([sen_i, sen_j])
+        num_sen = len(sentences)
+        print("Number of sentences: " + str(num_sen))
+        indexes = generate_indexes(num_sen)
+        #print("num comparisons: " + str(len(list(indexes))))
+
+        print("get sentence vectors. ")
+        sentence_vectors = tr.get_sentence_vectors(email_masked_df)
 
         #Start multiprocessing similarity matrix
         print("Start multiprocessing pool")
         pool = mp.Pool(processes=cpus)
         func = partial(processCosineSim, sentence_vectors)
-        #result = pool.map(func, indexes)
-        #with chunk size 20
-        result = pool.imap(func, indexes, 20)
-        #test function
-        #result = pool.map(processCosineSim, full_vectors)
+        result = pool.imap(func, indexes, chunksize=(num_sen // cpus))
         pool.close()
         pool.join()
-        #ranked_sentences = tr.rank_sentences(sentences, result, indexes)
-        ranked_sentences = tr.rank_sentences(sentences, list(result), indexes)
+
+        #reinitalize generator
+        indexes = generate_indexes(len(sentences))
+        print("Rank Sentences")
+        ranked_sentences = tr.rank_sentences(sentences, result, indexes)
+        #print(ranked_sentences)
         print("Append rank and push to database")
         email_masked_df = tr.append_rank_df(ranked_sentences, email_masked_df)
         print(email_masked_df)

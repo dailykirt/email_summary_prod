@@ -55,12 +55,13 @@ class TextRank:
         """Retrieve original sentences and index them. This will be used to generate the extracted summaries. """
         # flatten list as tuples containting (sentence, dataframe index) to be used to reassociate summary with original email.
         sentences = []
+        #dt = np.dtype('int,')
         #sentences = np.array([[0, 'initialize']])
         sentences_list = email_masked_df.extractive_sentences.tolist()
         #flatten sentences and keep email number.
         for counter, sublist in enumerate(sentences_list):
             for item in sublist:
-                sentences.append([counter, item])
+                sentences.append((counter, item))
         #try numpy array instead
         return sentences
 
@@ -78,11 +79,6 @@ class TextRank:
         sentence_vectors = [np.asarray(y, dtype=np.float32) for x in sentence_vectors for y in x]
         return sentence_vectors
 
-    #def processCosineSim(self, index):
-        # Used to calculate sentence similarity
-    #    sen_i = self.sentence_vectors[index[0]].reshape(1, 300)
-    #    sen_j = self.sentence_vectors[index[1]].reshape(1, 300)
-    #    return cosine_similarity(sen_i, sen_j)[0, 0]
 
     #def rank_sentences(self, sentensubset_emailsces, sentence_vectors):
     def rank_sentences(self, sentences, sim_result, indexes):
@@ -90,22 +86,17 @@ class TextRank:
         #manually garbage collect
         gc.collect()
         num_sen = len(sentences)
-        print("Number of sentences: " + str(num_sen))
+        #print("Number of sentences: " + str(num_sen))
         sim_mat = np.zeros([num_sen, num_sen])
 
-        # for i in range(num_sen):
-        #     for j in range(num_sen):
-        #         if (i != j) and (i < j):  # Don't compare sentence to itself, or repeat comparisons.
-        #             sen_i = sentence_vectors[i].reshape(1, 300)
-        #             sen_j = sentence_vectors[j].reshape(1, 300)
-        #             sim_mat[i][j] = cosine_similarity(sen_i, sen_j)[0, 0]
         for count, index in enumerate(indexes):
             i = index[0]
             j = index[1]
-            if (i != j) and (i < j):
-                sim_mat[i][j] = sim_result[count]
-            elif (j < i):
-                sim_mat[i][j] = sim_result[count]
+            sim_mat[i][j] = next(sim_result)
+            #if (i != j) and (i < j):
+            #    sim_mat[i][j] = sim_result[count]
+            #elif (j < i):
+            #    sim_mat[i][j] = sim_result[count]
 
         scores = nx.pagerank(nx.from_numpy_array(sim_mat))
         # Pair sentence with it's similarity score then sort. (score, email_index, sentence)
@@ -113,11 +104,15 @@ class TextRank:
 
     def unroll_rank_indexes(self, sen_len):
         #This returns a list of indexes that need to be calculated for the similarity matrix.
+        print("Num sentences = " + str(sen_len))
         indexes = []
+        #dt=np.dtype('int, int')
+        #np.array(indexes,dtype=dt)
+
         for i in range(sen_len):
             for j in range(sen_len):
                 if (i != j) and (i < j):
-                    indexes.append([i, j])
+                    indexes.append((i, j))
         return indexes
 
     def append_rank_df(self, ranked_sentences, email_masked_df):
