@@ -81,18 +81,19 @@ class DataWrangling:
 
     def load_enron_mail(self):
         # Go through each person's inbox then load up each email to be cleaned and added to the dataframe.
-        # mailboxes = listdir(mail_dir)
-        # for mailbox in mailboxes:
-        mailbox = data_config.mailbox
-        print("Processing mailbox: " + mailbox)
-        inbox = listdir(data_config.mail_dir + mailbox)
-        for folder in inbox:
-            path = data_config.mail_dir + data_config.mailbox + "/" + folder
-            emails = listdir(path)
-            for single_email in emails:
-                full_path = path + "/" + single_email
-                self.process_email(full_path, mailbox, folder)
-        self.enron_email_list_df = pd.DataFrame(self.enron_email_list)
+        mailboxes = listdir(data_config.mail_dir)
+        #mailboxes = data_config.mailbox
+        for mailbox in mailboxes:
+            #mailbox = data_config.mailbox
+            print("Processing mailbox: " + mailbox)
+            inbox = listdir(data_config.mail_dir + mailbox)
+            for folder in inbox:
+                path = data_config.mail_dir + mailbox + "/" + folder
+                emails = listdir(path)
+                for single_email in emails:
+                    full_path = path + "/" + single_email
+                    self.process_email(full_path, mailbox, folder)
+            self.enron_email_list_df = pd.DataFrame(self.enron_email_list)
 
     # Email body cleaning at dataframe level
     def clean_email_df(self):
@@ -134,6 +135,31 @@ class DataWrangling:
 
     def wrangle_full_enron(self):
         self.load_enron_mail()
+        self.clean_date()
+        self.clean_email_df()
+        # This tokenizing will be the extracted sentences that may be chosen to form the email summaries.
+        self.enron_email_list_df['extractive_sentences'] = self.enron_email_list_df['body'].apply(sent_tokenize)
+        # Splitting the text in emails into cleaned sentences
+        self.enron_email_list_df['tokenized_body'] = self.enron_email_list_df['body'].apply(self.tokenize_email)
+
+#------going one mailbox at a time--------------
+
+    def get_inboxes(self):
+        self.mailboxes = listdir(data_config.mail_dir)
+
+    def load_mail(self, mailbox):
+        print("Processing mailbox: " + mailbox)
+        inbox = listdir(data_config.mail_dir + mailbox)
+        for folder in inbox:
+            path = data_config.mail_dir + mailbox + "/" + folder
+            emails = listdir(path)
+            for single_email in emails:
+                full_path = path + "/" + single_email
+                self.process_email(full_path, mailbox, folder)
+        self.enron_email_list_df = pd.DataFrame(self.enron_email_list)
+
+    def wrangle_mailbox(self, mailbox):
+        self.load_mail(mailbox)
         self.clean_date()
         self.clean_email_df()
         # This tokenizing will be the extracted sentences that may be chosen to form the email summaries.
