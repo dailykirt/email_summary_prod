@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 
-# color scheme to help distinguish summarizaiton text.
+# color scheme to help distinguish summary text.
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -22,11 +22,13 @@ class EmailModel:
         self.original_emails = []
 
     def list_employees(self):
+        '''Postgres SQL select to get list of employee inboxes.'''
         query = 'SELECT DISTINCT "employee" FROM ' + self.table
         self.employees = pd.read_sql_query(query, self.db.engine, params=(self.table)).employee.unique()
         return self.employees
 
     def get_timeframe(self, inbox):
+        '''Retrieves earliest and last dates of emails sent for a given inbox.'''
         inbox = '\'' + inbox + '\''
         query = 'SELECT min(date) FROM ' + self.table + ' WHERE employee = ' + inbox
         start_date = pd.read_sql_query(query, self.db.engine).iloc[0][0]
@@ -63,7 +65,7 @@ class EmailModel:
                 sentence_vectors.append(np.array(vector, dtype=np.float32))
             return sentence_vectors
 
-        #TODO temporarily getting full inbox dataframe, but will need to pull with sql statement.
+        # TODO temporarily getting full inbox dataframe, but will need to pull with sql statement.
         query = 'SELECT * FROM ' + self.table + ' WHERE employee = ' + '\'' + inbox + '\''
         self.enron_df = pd.read_sql_query(query, self.db.engine)
         summarization_mask = (self.enron_df['date'] >= start_date) & (self.enron_df['date'] <= end_date) & (self.enron_df['employee'] == inbox)
@@ -82,24 +84,6 @@ class EmailModel:
                 sentences.append([counter, item])
         self.sentences = sentences
 
-    def get_tokenized_sentences(self):
-        """Pull out clean tokenized sentences. """
-        self.clean_sentences = self.enron_masked_df.Tokenized_Body.tolist()
-        # flatten list
-        self.clean_sentences = [y for x in self.clean_sentences for y in x]
-
-
-    def create_sentence_vectors(self):
-        """Create sentence_vectors"""
-        sentence_vectors = []
-        for i in self.clean_sentences:
-            if len(i) != 0:
-                v = sum([self.word_embeddings.get(w, np.zeros((300,))) for w in i.split()]) / (len(i.split()) + 0.001)
-            else:
-                v = np.zeros((300,))
-            sentence_vectors.append(v)
-        self.sentence_vectors = sentence_vectors
-
     def create_summary_df(self):
         #This takes the extractive sentences, and pairs them with the TextRank to prepare display
         TextRanks = self.enron_masked_df.TextRanks.tolist()
@@ -114,7 +98,7 @@ class EmailModel:
         print(self.display_top_df)
 
     def display_summary(self):
-        # reclear out dispaly summaries
+        '''Create summay in both HTML and STDOUT'''
         self.final_summary = ''
         self.html_summary = []
         self.original_emails = []
@@ -142,7 +126,6 @@ class EmailModel:
 
             self.original_emails.append(email_body)
         #print(final_summary)
-
 
     def retrieve_summaries(self, start, end, inbox):
         self.subset_emails(start, end, inbox)
