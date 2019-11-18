@@ -4,6 +4,10 @@ notebooks/test_books/
 *.pkl
 notebooks/dask-worker-space/
 *config.py*
+.gitignore
+.idea*
+*.pem
+config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
