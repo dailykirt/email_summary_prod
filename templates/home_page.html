@@ -6,19 +6,25 @@
 </head>
 
 <body>
+    <p> A tool to explore the enron email dataset using extractive machine learning methods.
+        See the full code <a href="https://github.com/dailykirt/email_summary_prod" >here</a> <br>
+        Usage instructions are given for the buttons below. <br><br>
+        <b> Display valid dates: </b> This will show the timeframe the selected inbox has emails for. <br>
+        <b>Summaries:</b> This will give you the generated summaries for the timeframe for a given inbox <br>
+        <b>Emails:</b> This will display every email within the given timeframe <br>
+        <b>Summaries and emails:</b> This will give the summaries along with the full email the sentence was extracted from. <br><br>
+        Please keep in mind that large time frame requests (around six months or more) may time out due to heroku's timeout limit of 30 seconds.
+    </p>
 
     <form action="" method="post">
 
     {{ form.csrf_token() }}
-    <p> Please choose inbox you wish to summarize: </p>
-    <p>{{ form.inbox.label() }}   {{ form.inbox() }}
+
+    <p>{{ "Select inbox: " }}   {{ form.inbox() }}
             {% for inbox in form.inbox.errors %}
                 {{ inbox }}
             {% endfor %}
     </p>
-
-        <p> Display associated email with summary? </p>
-        {{ form.display_full() }}
 
         <p>
             {{ form.start_date.label() }}   {{ form.start_date() }}
@@ -32,6 +38,18 @@
             {% endfor %}
         </p>
 
+        <p> {{ form.show_dates() }} {{ form.summary() }}  {{ form.email() }} {{ form.summary_email() }}
+            {% for error in form.summary.errors %}
+                {{ error }}
+            {% endfor %}
+            {% for error in form.summary_email.errors %}
+                {{ error }}
+            {% endfor %}
+                    {% for error in form.email.errors %}
+                {{ error }}
+            {% endfor %}
+    </p>
+
       {% with messages = get_flashed_messages() %}
          {% if messages %}
             <ul>
@@ -43,13 +61,6 @@
             </ul>
          {% endif %}
       {% endwith %}
-
-    <p> {{ form.submit() }}
-            {% for error in form.submit.errors %}
-                {{ error }}
-            {% endfor %}
-    </p>
-
 
 </body>
 </html>

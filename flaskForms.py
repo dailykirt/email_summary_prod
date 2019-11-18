@@ -4,13 +4,9 @@ from wtforms import SelectField, SubmitField, StringField, RadioField, validator
 
 class SummarizationForm(FlaskForm):
     inbox = SelectField('Inbox')
-    submit = SubmitField('Submit')
+    summary = SubmitField('Summaries')
+    email = SubmitField('Emails')
+    summary_email = SubmitField('Summaries and emails')
+    show_dates = SubmitField('Display valid dates')
     start_date = StringField('Start Date: ')
     end_date = StringField('End Date: ')
-
-    display_full = RadioField(
-        'display_full',
-        [validators.Required()],
-        choices=[('yes', True), ('no', False)], default='no'
-    )
-

@@ -19,6 +19,7 @@ class EmailModel:
         self.table = table
         self.final_summary = ''
         self.html_summary = []
+        self.html_emails = []
         self.original_emails = []
 
     def list_employees(self):
@@ -34,7 +35,7 @@ class EmailModel:
         start_date = pd.read_sql_query(query, self.db.engine).iloc[0][0]
         query = 'SELECT max(date) FROM ' + self.table + ' WHERE employee = ' + inbox
         end_date = pd.read_sql_query(query, self.db.engine).iloc[0][0]
-        return {'start': str(start_date), 'end': str(end_date)}
+        return {'start': str(start_date).split("+",1)[0], 'end': str(end_date).split("+",1)[0]}
 
     def subset_emails(self, start_date, end_date, inbox):
         """Outputs a subset of the enron dataset masked by the person and a timeframe. """
@@ -66,7 +67,8 @@ class EmailModel:
             return sentence_vectors
 
         # TODO temporarily getting full inbox dataframe, but will need to pull with sql statement.
-        query = 'SELECT * FROM ' + self.table + ' WHERE employee = ' + '\'' + inbox + '\''
+        query = 'SELECT employee, date, "from", subject, "TextRanks", body, extractive_sentences, sentence_vectors FROM ' + self.table + ' WHERE employee = ' + '\'' + inbox + '\''
+        #query = 'SELECT * FROM ' + self.table + ' WHERE employee = ' + '\'' + inbox + '\''
         self.enron_df = pd.read_sql_query(query, self.db.engine)
         summarization_mask = (self.enron_df['date'] >= start_date) & (self.enron_df['date'] <= end_date) & (self.enron_df['employee'] == inbox)
         self.enron_masked_df = self.enron_df.loc[summarization_mask]
@@ -95,7 +97,7 @@ class EmailModel:
         sn = (len(self.enron_masked_df) // 10) + 1
         self.display_top_df = output_df.nlargest(sn, 'TextRanks')
 
-        print(self.display_top_df)
+        #print(self.display_top_df)
 
     def display_summary(self):
         '''Create summay in both HTML and STDOUT'''
@@ -106,7 +108,7 @@ class EmailModel:
         for index, row in self.display_top_df.iterrows():
             # pull date and subject from original email
             i = row['Sentences'][0]
-            email_date = str(self.enron_masked_df['date'].iloc[i])
+            email_date = str(self.enron_masked_df['date'].iloc[i].ctime())
             email_subject = str(self.enron_masked_df['subject'].iloc[i])
             email_from = str(self.enron_masked_df['from'].iloc[i])
             email_body = str(self.enron_masked_df['body'].iloc[i])
@@ -126,6 +128,22 @@ class EmailModel:
 
             self.original_emails.append(email_body)
         #print(final_summary)
+
+    def display_emails(self):
+        self.html_emails = []
+        self.enron_masked_df = self.enron_masked_df.sort_values(by='date')
+        for index, row in self.enron_masked_df.iterrows():
+            email_date = str(row['date'].ctime())
+            email_subject = str(row['subject'])
+            email_from = str(row['from'])
+            email_body = str(row['body'])
+
+            self.html_emails.append("<br/>" + \
+                                     "Date: " + email_date + \
+                                     " Subject: " + email_subject + \
+                                     " From: " + email_from + "<br/>" + \
+                                     "\nEmail body: " + email_body + "<br/>"
+                                     )
 
     def retrieve_summaries(self, start, end, inbox):
         self.subset_emails(start, end, inbox)
