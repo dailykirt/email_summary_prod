@@ -1,3 +1,5 @@
+import gc
+
 import networkx as nx
 import numpy as np
 import data_config
@@ -77,7 +79,9 @@ class TextRank:
 
     def rank_sentences(self, sentences, sim_result, indexes):
         """Returns a list of sorted scores with the index of the email the extracted sentence came from. """
+        gc.collect()
         num_sen = len(sentences)
+        self.logger.debug("Size of similarity matrix = " + str(num_sen * num_sen))
         sim_mat = np.zeros([num_sen, num_sen])
         for count, index in enumerate(indexes):
             i = index[0]
@@ -85,7 +89,7 @@ class TextRank:
             sim_mat[i][j] = next(sim_result)
 
         self.logger.debug("Start pagerank")
-        scores = nx.pagerank(nx.from_numpy_array(sim_mat), max_iter = 10000)
+        scores = nx.pagerank(nx.from_numpy_array(sim_mat))
         # Pair sentence with it's similarity score then sort. (score, email_index, sentence)
         return list(((scores[i], s[0], s[1]) for i, s in enumerate(sentences)))
 

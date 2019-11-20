@@ -10,7 +10,8 @@ import sys
 LOG_NAME = '__data_processing__'
 LOG_LOC = '../logs/processing.log'
 #Limits # of emails to process at a time for memory purposes.
-EMAIL_WINDOW = 1000
+#EMAIL_WINDOW = 1000
+EMAIL_WINDOW = 100
 SENTENCE_WINDOW = 10000000
 
 def set_logger():
