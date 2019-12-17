@@ -78,10 +78,13 @@ if __name__ == '__main__':
             result = pool.imap(func, indexes, chunksize=(num_sen // cpus))
 
             indexes = tr.generate_indexes(num_sen, window)
-            ranked_sentences = tr.rank_sentences(sentences, result, indexes)
-            email_masked_df = tr.append_rank_df(ranked_sentences, email_masked_df)
-            logger.info(email_masked_df)
-            tr.insert_db(email_masked_df)
+            try:
+                ranked_sentences = tr.rank_sentences(sentences, result, indexes)
+                email_masked_df = tr.append_rank_df(ranked_sentences, email_masked_df)
+                logger.info(email_masked_df)
+                tr.insert_db(email_masked_df)
+            except:
+                logger.info("PowerIterationFailedConvergence at inbox " + str(mailbox) + "in subset " + str(i))
         gc.collect()
 
     pool.close()
