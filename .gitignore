@@ -7,6 +7,7 @@ notebooks/dask-worker-space/
 .idea*
 *.pem
 data/
+*config.py*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
